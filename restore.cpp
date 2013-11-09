@@ -160,11 +160,11 @@ void restore_get_prj(SSL *ssl, vector<string> &prj_list)
     ssl_read_wrapper(ssl, buffer, 2); 
     ssl_read_wrapper(ssl, &file_count, 4);
     file_count = ntoh32(file_count);
-    fprintf(stdout,"%u",file_count);
+    fwrite(&file_count, 1, sizeof(file_count), stdout);
     for(i = 0; i < file_count; i++)
     {
         prj_name = read_string(ssl);
-        fprintf(stdout,"%s",prj_name);
+        fwrite(prj_name, 1, strlen(prj_name) + 1, stdout);
         prj_list.push_back(prj_name);
         free(prj_name);
     }
@@ -187,15 +187,15 @@ void restore_get_time_line(SSL *ssl, const char *prj_name, vector<IDTIME> &prj_l
     ssl_read_wrapper(ssl, buffer, 2); 
     ssl_read_wrapper(ssl, &list_size, 4);
     list_size = ntoh32(list_size);
-    fprintf(stdout,"%u",list_size);
+    fwrite(&list_size, 1, sizeof(list_size), stdout);
     for(i = 0; i < list_size; i++)
     {
         ssl_read_wrapper(ssl, &backup_id, 4);
         ssl_read_wrapper(ssl, &backup_time, 4);
         backup_id = ntoh32(backup_id);
         backup_time = ntoh32(backup_time);
-        fprintf(stdout, "%u", backup_id);
-        fprintf(stdout, "%u", backup_time);
+        fwrite(&backup_id, 1, sizeof(backup_id), stdout);
+        fwrite(&backup_time, 1, sizeof(backup_time), stdout);
         tmp.backup_id = backup_id;
         tmp.finished_time = backup_time;
         prj_list.push_back(tmp);
@@ -214,7 +214,7 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
     char file_type;
     FILE *file;
     char file_buffer[MAX_BUFFER_SIZE];
-    char backup_id_str[32];
+    char backup_id_str[8];
     string dir_name;
     dir_name.append(prj_name);
     sprintf(backup_id_str,"%d",backup_id);
@@ -470,12 +470,15 @@ int main(int argc, char **argv)
         //instruction = getinfo
         if(!(strcmp(ins.c_str(),"getinfo")))
         {
-
             vector<string> prj_list;
             vector<vector<IDTIME> > prj_map;
             size_t i = 0;
             restore_get_prj(ssl, prj_list);
             size_t size = prj_list.size();
+            for(int loop = 0; loop < (int)size; loop++)
+            {
+                fprintf(stderr, "project name:%s\n",prj_list.at(loop).c_str());
+            }
             for(; i < size; i++)
             {
                 restore_get_time_line(ssl, prj_list.at(i).c_str(), prj_map.at(i));

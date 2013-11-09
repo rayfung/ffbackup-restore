@@ -8,7 +8,7 @@
 #include "ffbuffer.h"
 #include "helper.h"
 
-const char *CFG_PATH = "/etc/ffbackup/client.cfg";
+const char *CFG_PATH = "/home/william/git/ffbackup/Restore/client.cfg";
 
 /**
  * read the configuration file
