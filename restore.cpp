@@ -170,7 +170,7 @@ void restore_get_prj(SSL *ssl, vector<string> &prj_list)
     }
 }
 
-void restore_get_time_line(SSL *ssl, const char *prj_name, vector<IDTIME> &prj_list)
+void restore_get_time_line(SSL *ssl, const char *prj_name)
 {
     char buffer[2];
     char command = 0x09;
@@ -178,7 +178,6 @@ void restore_get_time_line(SSL *ssl, const char *prj_name, vector<IDTIME> &prj_l
     uint32_t backup_time;
     uint32_t list_size;
     uint32_t i = 0;
-    IDTIME tmp;
 
     buffer[0] = version;
     buffer[1] = command;
@@ -196,9 +195,6 @@ void restore_get_time_line(SSL *ssl, const char *prj_name, vector<IDTIME> &prj_l
         backup_time = ntoh32(backup_time);
         fwrite(&backup_id, 1, sizeof(backup_id), stdout);
         fwrite(&backup_time, 1, sizeof(backup_time), stdout);
-        tmp.backup_id = backup_id;
-        tmp.finished_time = backup_time;
-        prj_list.push_back(tmp);
     }
 }
 
@@ -471,17 +467,18 @@ int main(int argc, char **argv)
         if(!(strcmp(ins.c_str(),"getinfo")))
         {
             vector<string> prj_list;
-            vector<vector<IDTIME> > prj_map;
             size_t i = 0;
             restore_get_prj(ssl, prj_list);
             size_t size = prj_list.size();
+            /*
             for(int loop = 0; loop < (int)size; loop++)
             {
                 fprintf(stderr, "project name:%s\n",prj_list.at(loop).c_str());
             }
+            */
             for(; i < size; i++)
             {
-                restore_get_time_line(ssl, prj_list.at(i).c_str(), prj_map.at(i));
+                restore_get_time_line(ssl, prj_list.at(i).c_str());
             }
         }
         //instruction = restore
