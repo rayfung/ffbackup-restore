@@ -8,7 +8,7 @@
 #include "ffbuffer.h"
 #include "helper.h"
 
-const char *CFG_PATH = "/home/william/git/ffbackup/Restore/client.cfg";
+const char *CFG_PATH = "/etc/ffbackup/client.cfg";
 
 /**
  * read the configuration file
@@ -27,7 +27,7 @@ char *read_item(const char *item)
     char *dest, *result;
     if((fp = fopen(CFG_PATH, "r") ) == NULL)
     {
-        fputs("Can not open the configue file.\n",stderr);
+        fputs("Can not open the configuration file.\n",stderr);
         return NULL;
     }
     while(fgets(buffer, MAX_BUFFER_SIZE, fp) != NULL)
