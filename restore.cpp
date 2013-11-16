@@ -1,7 +1,3 @@
-#include "restore.h"
-#include "commonfunctions.h"
-#include "ffbuffer.h"
-
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -14,6 +10,10 @@
 #include <openssl/err.h>
 #include <librsync.h>
 
+#include "restore.h"
+#include "ffbuffer.h"
+#include "config.h"
+
 
 using namespace std;
 
@@ -25,10 +25,10 @@ extern const char *CFG_PATH;
 const char version = 0x02;
 const int MAX_BUFFER_SIZE = 1024;
 
+client_config g_config;
 
 extern char *optarg;
 static BIO  *bio_err = 0;
-static int  verbose = 0;
 
 static int  err_exit( const char * );
 static int  ssl_err_exit( const char * );
@@ -285,17 +285,15 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
 
 int main(int argc, char **argv)
 {
-
-
     int c,sock;
     SSL_CTX *ctx;
     const SSL_METHOD *meth;
     SSL *ssl;
     BIO *sbio;
-    char *cafile = NULL;
-    char *cadir = NULL;
-    char *certfile = NULL;
-    char *keyfile = NULL;
+    const char *cafile = NULL;
+    const char *cadir = NULL;
+    const char *certfile = NULL;
+    const char *keyfile = NULL;
     const char *host = NULL;
     const char *port = NULL;
     const char *instruction = NULL;
@@ -304,64 +302,25 @@ int main(int argc, char **argv)
     const char *dir = NULL;
     int tlsv1 = 0;
 
-    while( (c = getopt( argc, argv, "c:e:k:d:hi:p:t:Tvf:n:o:r:" )) != -1 )
+    while( (c = getopt( argc, argv, "hi:Tf:n:o:r:" )) != -1 )
     {
         switch(c)
         {
             case 'h':
                 fprintf(stderr, "-T\t\tTLS v1 protocol\n" );
-                fprintf(stderr, "-t <host>\tTarget host name (default 'localhost')\n" );
-                fprintf(stderr, "-p <port>\tTarget port number (default 16903)\n" );
-                fprintf(stderr, "-c <file>\tCA certificate file\n" );
-                fprintf(stderr, "-e <file>\tCertificate file\n" );
-                fprintf(stderr, "-k <file>\tPrivate key file\n" );
-                fprintf(stderr, "-d <dir>\tCA certificate directory\n" );
                 fprintf(stderr, "-i <instruction>\tInstruction name\n");
                 fprintf(stderr, "-o <path>\tOutput file path\n");
                 fprintf(stderr, "-f <path>\tConfiguration file path\n");
                 fprintf(stderr, "-n <name>\tProject name\n");
                 fprintf(stderr, "-o <order>\tOrder of the project\n");
                 fprintf(stderr, "-r <dir>\tDir to restore\n");
-                fprintf(stderr, "-v\t\tVerbose\n" );
                 exit(0);
 
-            case 't':
-                if ( ! (host = strdup( optarg )) )
-                    err_exit( "Out of memory" );
-                break;
-
-            case 'p':
-                if ( ! (port = strdup( optarg )) )
-                    err_exit( "Invalid port specified" );
-                break;
-            case 'r':
-                if ( ! (dir = strdup( optarg )) )
-                    err_exit( "Invalid dir specified" );
-                break;
-
-            case 'd':
-                if ( ! (cadir = strdup( optarg )) )
-                    err_exit( "Out of memory" );
-                break;
-
-            case 'c':
-                if ( ! (cafile = strdup( optarg )) )
-                    err_exit( "Out of memory" );
-                break;
-
-            case 'e':   /* Certificate File */
-                if ( ! (certfile = strdup( optarg )) )
-                    err_exit( "Out of memory" );
-                break;
             case 'i':
                 if ( ! (instruction = strdup( optarg )) )
                     err_exit( "Out of memory");
                 break;
 
-            case 'k':
-                if ( ! (keyfile = strdup( optarg )) )
-                    err_exit( "Out of memory" );
-                break;
             case 'n':
                 if ( ! (prj_name = strdup( optarg )) )
                     err_exit( "Out of memory");
@@ -376,21 +335,24 @@ int main(int argc, char **argv)
                 if( ! (order = strdup( optarg )) )
                     err_exit("Out of memory");
                 break;
+
+            case 'r':
+                if( ! (dir = strdup( optarg )) )
+                    err_exit("Out of memory");
+                break;
+
             case 'T':  tlsv1 = 1;       break;
-            case 'v':  verbose = 1;     break;
         }
     }
 
-    if(cafile == NULL)
-        cafile = read_item("CA_certificate_file");
-    if(certfile == NULL)
-        certfile = read_item("Certificate_file");
-    if(keyfile == NULL)
-        keyfile = read_item("Private_key_file");
-    if(host == NULL)
-        host = read_item("Target_host");
-    if(port == NULL)
-        port = read_item("Target_port");
+    if(!g_config.read_config(CFG_PATH))
+        exit(1);
+
+    cafile   = g_config.get_ca_file();
+    certfile = g_config.get_cert_file();
+    keyfile  = g_config.get_key_file();
+    host     = g_config.get_host();
+    port     = g_config.get_service();
 
     /* Initialize SSL Library */
     SSL_library_init();
@@ -435,31 +397,16 @@ int main(int argc, char **argv)
     sbio = BIO_new_socket( sock, BIO_NOCLOSE );
     SSL_set_bio( ssl, sbio, sbio );
 
-    if ( verbose )
-    {
-        const char *str;
-        int i;
-
-        fprintf(stderr, "Ciphers: \n" );
-
-        for( i = 0; (str = SSL_get_cipher_list( ssl, i )); i++ )
-            fprintf( stderr, "    %s\n", str );
-    }
-
     /* Perform SSL client connect handshake */
     if ( SSL_connect( ssl ) <= 0 )
         ssl_err_exit( "SSL connect error" );
 
     check_certificate( ssl, 1 );
 
-    if ( verbose )
-        fprintf(stderr, "Cipher: %s\n", SSL_get_cipher( ssl ) );
-
-    /* Now make our request */
     //1.get all projects that can be restored
     //2.for each prj in projects get the backup_id and time_line
     //3.the user specify a specified prj_name and bacup_id to restore
-    
+
     string ins(instruction);
     if(instruction)
     {

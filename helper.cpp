@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include "helper.h"
+#include "ffbuffer.h"
 
 #define FF_LITTLE_ENDIAN 0
 #define FF_BIG_ENDIAN 1
+
+const char *CFG_PATH = "/etc/ffbackup/client.cfg";
 
 void dump_data(void *data, size_t size)
 {
@@ -69,4 +72,71 @@ uint64_t hton64(uint64_t host)
             ptr_u[i] = ptr_host[j];
     }
     return u;
+}
+
+char *read_string(SSL *ssl)
+{
+    ffbuffer store;
+    char buf[1];
+    int ret;
+    size_t ffbuffer_length = 0;
+    char *pass;
+    while(1)
+    {
+        ret = SSL_read(ssl, buf, 1);
+        switch( SSL_get_error( ssl, ret ) )
+        {
+            case SSL_ERROR_NONE:
+                break;
+            default:
+                fputs("SSL_write error.\n",stderr);
+                exit(1);
+        }
+        store.push_back(buf,1);
+        if(!buf[0])
+            break;
+    }
+    ffbuffer_length = store.get_size();
+    pass = (char *)malloc(ffbuffer_length);
+    if(!pass)
+    {
+        fputs("Malloc error.\n",stderr);
+        exit(1);
+    }
+    store.get(pass, 0, ffbuffer_length);
+    return pass;
+}
+
+void ssl_read_wrapper(SSL *ssl, void *buffer, int num)
+{
+    int ret = 0;
+    int pos = 0;
+    char *ptr = (char *)buffer;
+    while(pos < num)
+    {
+        ret = SSL_read(ssl, ptr + pos, num - pos);
+        switch( SSL_get_error( ssl, ret ) )
+        {
+            case SSL_ERROR_NONE:
+                break;
+            default:
+                fputs("SSL_read error.\n",stderr);
+                exit(1);
+        }
+        pos += ret;
+    }
+}
+
+void ssl_write_wrapper(SSL *ssl, const void *buffer, int num)
+{
+    int ret;
+    ret = SSL_write(ssl, buffer, num);
+    switch( SSL_get_error( ssl, ret ) )
+    {
+        case SSL_ERROR_NONE:
+            break;
+        default:
+            fputs("SSL_write error.\n",stderr);
+            exit(1);
+    }
 }
