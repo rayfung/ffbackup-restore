@@ -298,22 +298,21 @@ int main(int argc, char **argv)
     const char *port = NULL;
     const char *instruction = NULL;
     const char *prj_name = NULL;
-    const char *order = NULL;
+    const char *revision = NULL;
     const char *dir = NULL;
     int tlsv1 = 0;
 
-    while( (c = getopt( argc, argv, "hi:Tf:n:o:r:" )) != -1 )
+    while( (c = getopt( argc, argv, "hi:Tf:p:r:o:" )) != -1 )
     {
         switch(c)
         {
             case 'h':
                 fprintf(stderr, "-T\t\tTLS v1 protocol\n" );
                 fprintf(stderr, "-i <instruction>\tInstruction name\n");
-                fprintf(stderr, "-o <path>\tOutput file path\n");
                 fprintf(stderr, "-f <path>\tConfiguration file path\n");
-                fprintf(stderr, "-n <name>\tProject name\n");
-                fprintf(stderr, "-o <order>\tOrder of the project\n");
-                fprintf(stderr, "-r <dir>\tDir to restore\n");
+                fprintf(stderr, "-p <name>\tProject name\n");
+                fprintf(stderr, "-r <order>\tRevision of the project\n");
+                fprintf(stderr, "-o <dir>\tOutput directory\n");
                 exit(0);
 
             case 'i':
@@ -321,7 +320,7 @@ int main(int argc, char **argv)
                     err_exit( "Out of memory");
                 break;
 
-            case 'n':
+            case 'p':
                 if ( ! (prj_name = strdup( optarg )) )
                     err_exit( "Out of memory");
                 break;
@@ -331,12 +330,12 @@ int main(int argc, char **argv)
                     err_exit("Out of memory");
                 break;
             
-            case 'o':
-                if( ! (order = strdup( optarg )) )
+            case 'r':
+                if( ! (revision = strdup( optarg )) )
                     err_exit("Out of memory");
                 break;
 
-            case 'r':
+            case 'o':
                 if( ! (dir = strdup( optarg )) )
                     err_exit("Out of memory");
                 break;
@@ -431,7 +430,7 @@ int main(int argc, char **argv)
         //instruction = restore
         else if(!(strcmp(ins.c_str(),"restore")))
         {
-            uint32_t tmp_id = atoi(order);
+            uint32_t tmp_id = atoi(revision);
             if(dir)
             {
                 string tmp_dir(dir);
