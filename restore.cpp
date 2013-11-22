@@ -17,9 +17,6 @@
 
 using namespace std;
 
-#define SSL_DFLT_HOST  "localhost"
-#define SSL_DFLT_PORT  "16903"
-
 extern const char *CFG_PATH;
 
 const char version = 0x02;
@@ -149,7 +146,7 @@ void restore_get_prj(SSL *ssl, vector<string> &prj_list)
 {
     char buffer[2];
     char command = 0x08;
-    uint32_t file_count = 0;
+    uint32_t count = 0;
     uint32_t i = 0;
     char *prj_name;
 
@@ -158,10 +155,11 @@ void restore_get_prj(SSL *ssl, vector<string> &prj_list)
 
     ssl_write_wrapper(ssl, buffer, 2); 
     ssl_read_wrapper(ssl, buffer, 2); 
-    ssl_read_wrapper(ssl, &file_count, 4);
-    file_count = ntoh32(file_count);
-    fwrite(&file_count, 1, sizeof(file_count), stdout);
-    for(i = 0; i < file_count; i++)
+    ssl_read_wrapper(ssl, &count, 4);
+    count = ntoh32(count);
+    fwrite(&count, 1, sizeof(count), stdout);
+    prj_list.clear();
+    for(i = 0; i < count; i++)
     {
         prj_name = read_string(ssl);
         fwrite(prj_name, 1, strlen(prj_name) + 1, stdout);
@@ -212,26 +210,18 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
     char file_buffer[MAX_BUFFER_SIZE];
     char backup_id_str[8];
     string dir_name;
+
     dir_name.append(prj_name);
     sprintf(backup_id_str,"%d",backup_id);
     dir_name.append(backup_id_str);
-    //1.change to the project path
 
     if(chdir(prj_restore_dir) == -1)
-    {
-        fputs("Chdir error.\n",stderr);
-        exit(1);
-    }
-    if(mkdir(dir_name.c_str(),S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1)
-    {
-        fputs("Mkdir error.\n",stderr);
-        exit(1);
-    }
+        die("chdir error");
+    if(mkdir(dir_name.c_str(), 0775) == -1)
+        die("mkdir error");
     if(chdir(dir_name.c_str()) == -1)
-    {
-        fputs("Chdir error.\n",stderr);
-        exit(1);
-    }
+        die("chdir error");
+
     buffer[0] = version;
     buffer[1] = command;
     ssl_write_wrapper(ssl, buffer, 2);
@@ -249,20 +239,14 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
         ssl_read_wrapper(ssl, &file_type, 1);
         if(file_type == 'd')
         {
-            if(mkdir(file_path,S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH) == -1)
-            {
-                fputs("Mkdir error.\n",stderr);
-                exit(1);
-            }
+            if(mkdir(file_path, 0775) == -1)
+                die("mkdir error");
         }
-        else
+        else if(file_type == 'f')
         {
             file = fopen(file_path, "wb");
             if(!file)
-            {
-                fputs("Fopen error.\n",stderr);
-                exit(1);
-            }
+                die("fopen error");
             ssl_read_wrapper(ssl, &file_size, 8);
             file_size = ntoh64(file_size);
             while((total_read + MAX_BUFFER_SIZE) < file_size)
