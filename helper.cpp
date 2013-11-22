@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <arpa/inet.h>
+#include <sstream>
 #include "helper.h"
 #include "ffbuffer.h"
 
@@ -139,4 +140,12 @@ void ssl_write_wrapper(SSL *ssl, const void *buffer, int num)
             fputs("SSL_write error.\n",stderr);
             exit(1);
     }
+}
+
+std::string size2string(size_t size)
+{
+    std::ostringstream s;
+
+    s << size;
+    return s.str();
 }
