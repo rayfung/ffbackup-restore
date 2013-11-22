@@ -403,15 +403,15 @@ int main(int argc, char **argv)
 
     check_certificate( ssl, 1 );
 
-    //1.get all projects that can be restored
-    //2.for each prj in projects get the backup_id and time_line
-    //3.the user specify a specified prj_name and bacup_id to restore
+    //恢复流程：
+    //1.获取可恢复的项目列表
+    //2.获取每个可恢复项目的备份历史
+    //3.恢复指定项目的指定历史
 
-    string ins(instruction);
     if(instruction)
     {
         //instruction = getinfo
-        if(!(strcmp(ins.c_str(),"getinfo")))
+        if(!(strcmp(instruction, "getinfo")))
         {
             vector<string> prj_list;
             size_t i = 0;
@@ -429,7 +429,7 @@ int main(int argc, char **argv)
             }
         }
         //instruction = restore
-        else if(!(strcmp(ins.c_str(),"restore")))
+        else if(!(strcmp(instruction, "restore")))
         {
             uint32_t tmp_id = atoi(revision);
             if(dir)
@@ -442,10 +442,10 @@ int main(int argc, char **argv)
             //restore(ssl, prj_name, order, const char *prj_restore_dir)
         }
         else
-            fprintf(stderr, "Can not find instruction\n");
+            fprintf(stderr, "instruction invalid.\n");
     }
     else
-        fprintf(stderr, "Input your instruction\n");
+        fprintf(stderr, "instruction not specified.\n");
 
     /* Shutdown SSL connection */
     if(SSL_shutdown( ssl ) == 0)
