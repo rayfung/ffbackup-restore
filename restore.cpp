@@ -242,6 +242,7 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
     ssl_read_wrapper(ssl, buffer, 2);
     ssl_read_wrapper(ssl, &list_size, 4);
     list_size = ntoh32(list_size);
+    fwrite(&list_size, 1, sizeof(list_size), stdout);
     for(i = 0; i < list_size; i++)
     {
         file_path = read_string(ssl);
@@ -278,7 +279,7 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
             fclose(file);
             total_read = 0;
         }
-        fprintf(stderr, "%u", i);
+        fwrite(&i, 1, sizeof(i), stdout);
         free(file_path);
     }
 }
