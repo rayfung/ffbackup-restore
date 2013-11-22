@@ -196,7 +196,7 @@ void restore_get_time_line(SSL *ssl, const char *prj_name)
     }
 }
 
-void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj_restore_dir)
+void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *output_dir)
 {
     char buffer[2];
     char command = 0x0A;
@@ -208,19 +208,13 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
     char file_type;
     FILE *file;
     char file_buffer[MAX_BUFFER_SIZE];
-    char backup_id_str[8];
-    string dir_name;
+    string base_dir;
 
-    dir_name.append(prj_name);
-    sprintf(backup_id_str,"%d",backup_id);
-    dir_name.append(backup_id_str);
+    base_dir.assign(output_dir);
+    base_dir += string("/") + prj_name + string("#") + size2string(backup_id);
 
-    if(chdir(prj_restore_dir) == -1)
-        die("chdir error");
-    if(mkdir(dir_name.c_str(), 0775) == -1)
-        die("mkdir error");
-    if(chdir(dir_name.c_str()) == -1)
-        die("chdir error");
+    if(mkdir(base_dir.c_str(), 0775) == -1)
+        die((base_dir + " already exists").c_str());
 
     buffer[0] = version;
     buffer[1] = command;
@@ -228,27 +222,31 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
     ssl_write_wrapper(ssl, prj_name, strlen(prj_name) + 1);
     backup_id = hton32(backup_id);
     ssl_write_wrapper(ssl, &backup_id, 4);
-    
+
     ssl_read_wrapper(ssl, buffer, 2);
     ssl_read_wrapper(ssl, &list_size, 4);
     list_size = ntoh32(list_size);
     fwrite(&list_size, 1, sizeof(list_size), stdout);
     for(i = 0; i < list_size; i++)
     {
+        string path;
+
         file_path = read_string(ssl);
+        path = base_dir + "/" + file_path;
         ssl_read_wrapper(ssl, &file_type, 1);
         if(file_type == 'd')
         {
-            if(mkdir(file_path, 0775) == -1)
+            if(mkdir(path.c_str(), 0775) == -1)
                 die("mkdir error");
         }
         else if(file_type == 'f')
         {
-            file = fopen(file_path, "wb");
+            file = fopen(path.c_str(), "wb");
             if(!file)
                 die("fopen error");
             ssl_read_wrapper(ssl, &file_size, 8);
             file_size = ntoh64(file_size);
+            total_read = 0;
             while((total_read + MAX_BUFFER_SIZE) < file_size)
             {
                 ssl_read_wrapper(ssl, file_buffer, MAX_BUFFER_SIZE);
@@ -261,7 +259,6 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *prj
                 fwrite(file_buffer, 1, file_size - total_read, file);
             }
             fclose(file);
-            total_read = 0;
         }
         fwrite(&i, 1, sizeof(i), stdout);
         free(file_path);
