@@ -411,41 +411,39 @@ int main(int argc, char **argv)
     if(instruction)
     {
         //instruction = getinfo
-        if(!(strcmp(instruction, "getinfo")))
+        if(!strcmp(instruction, "getinfo"))
         {
             vector<string> prj_list;
-            size_t i = 0;
+            size_t i;
+            size_t size;
+
             restore_get_prj(ssl, prj_list);
-            size_t size = prj_list.size();
-            /*
-            for(int loop = 0; loop < (int)size; loop++)
-            {
-                fprintf(stderr, "project name:%s\n",prj_list.at(loop).c_str());
-            }
-            */
-            for(; i < size; i++)
+            size = prj_list.size();
+            for(i = 0; i < size; i++)
             {
                 restore_get_time_line(ssl, prj_list.at(i).c_str());
             }
         }
         //instruction = restore
-        else if(!(strcmp(instruction, "restore")))
+        else if(!strcmp(instruction, "restore"))
         {
-            uint32_t tmp_id = atoi(revision);
-            if(dir)
-            {
-                string tmp_dir(dir);
-                restore(ssl, prj_name, tmp_id, tmp_dir.c_str());
-            }
-            else
-                fprintf(stderr, "Lack of dir to restore\n");
-            //restore(ssl, prj_name, order, const char *prj_restore_dir)
+            uint32_t tmp_id;
+
+            if(prj_name == NULL)
+                die("project name not specified.");
+            if(revision == NULL)
+                die("revision not specified.");
+            if(dir == NULL)
+                die("output directory not specified.");
+
+            tmp_id = atoi(revision);
+            restore(ssl, prj_name, tmp_id, dir);
         }
         else
-            fprintf(stderr, "instruction invalid.\n");
+            die("instruction invalid.");
     }
     else
-        fprintf(stderr, "instruction not specified.\n");
+        die("instruction not specified.");
 
     /* Shutdown SSL connection */
     if(SSL_shutdown( ssl ) == 0)
