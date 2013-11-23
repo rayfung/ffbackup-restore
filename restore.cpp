@@ -244,6 +244,7 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
         string path;
 
         file_path = read_string(ssl);
+        printf("[%d/%d] ", (int)(i + 1), (int)list_size);
         printf("creating %s", file_path);
         fflush(stdout);
 
@@ -278,6 +279,7 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
         free(file_path);
         printf("\n");
     }
+    printf("\nDone!\n");
 }
 
 int main(int argc, char **argv)
@@ -399,7 +401,7 @@ int main(int argc, char **argv)
 
     check_certificate( ssl, 1 );
 
-    system("/usr/bin/clear");
+    printf("\n");
     if(instruction)
     {
         if(!strcmp(instruction, "list"))
