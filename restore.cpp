@@ -382,7 +382,6 @@ int main(int argc, char **argv)
     SSL_CTX_set_default_passwd_cb( ctx, password_cb );
     if ( keyfile )
     {
-        fprintf(stderr, "load key file %s\n", keyfile);
         /* Load private key */
         if ( ! SSL_CTX_use_PrivateKey_file( ctx, keyfile, SSL_FILETYPE_PEM ) )
             ssl_err_exit( "Can't read key file" );
@@ -401,7 +400,6 @@ int main(int argc, char **argv)
 
     check_certificate( ssl, 1 );
 
-    printf("\n");
     if(instruction)
     {
         if(!strcmp(instruction, "list"))
