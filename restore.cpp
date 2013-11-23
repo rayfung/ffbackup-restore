@@ -295,27 +295,27 @@ int main(int argc, char **argv)
     const char *keyfile = NULL;
     const char *host = NULL;
     const char *port = NULL;
-    const char *instruction = NULL;
+    const char *command = NULL;
     const char *prj_name = NULL;
     const char *revision = NULL;
     const char *dir = NULL;
     int tlsv1 = 0;
 
-    while( (c = getopt( argc, argv, "hi:Tf:p:r:o:" )) != -1 )
+    while( (c = getopt( argc, argv, "hc:Tf:p:r:o:" )) != -1 )
     {
         switch(c)
         {
             case 'h':
                 fprintf(stderr, "-T\t\tTLS v1 protocol\n" );
-                fprintf(stderr, "-i <instruction>\tInstruction name\n");
+                fprintf(stderr, "-c <command>\tlist or restore\n");
                 fprintf(stderr, "-f <path>\tConfiguration file path\n");
                 fprintf(stderr, "-p <name>\tProject name\n");
                 fprintf(stderr, "-r <revision>\tRevision of the project\n");
                 fprintf(stderr, "-o <dir>\tOutput directory\n");
                 exit(0);
 
-            case 'i':
-                if ( ! (instruction = strdup( optarg )) )
+            case 'c':
+                if ( ! (command = strdup( optarg )) )
                     err_exit( "Out of memory");
                 break;
 
@@ -400,9 +400,9 @@ int main(int argc, char **argv)
 
     check_certificate( ssl, 1 );
 
-    if(instruction)
+    if(command)
     {
-        if(!strcmp(instruction, "list"))
+        if(!strcmp(command, "list"))
         {
             if(prj_name)
             {
@@ -441,7 +441,7 @@ int main(int argc, char **argv)
                 }
             }
         }
-        else if(!strcmp(instruction, "restore"))
+        else if(!strcmp(command, "restore"))
         {
             uint32_t tmp_id;
 
@@ -456,10 +456,10 @@ int main(int argc, char **argv)
             restore(ssl, prj_name, tmp_id, dir);
         }
         else
-            die("instruction invalid.");
+            die("command invalid.");
     }
     else
-        die("instruction not specified.");
+        die("command not specified.");
 
     /* Shutdown SSL connection */
     if(SSL_shutdown( ssl ) == 0)
