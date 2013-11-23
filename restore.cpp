@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <signal.h>
+#include <time.h>
 
 #include <openssl/sha.h>
 #include <openssl/bio.h>
@@ -142,7 +143,7 @@ void die(const char *msg)
 
 
 
-void restore_get_prj(SSL *ssl, vector<string> &prj_list)
+void get_project_list(SSL *ssl, list<string> *prj_list)
 {
     char buffer[2];
     char command = 0x08;
@@ -157,23 +158,21 @@ void restore_get_prj(SSL *ssl, vector<string> &prj_list)
     ssl_read_wrapper(ssl, buffer, 2); 
     ssl_read_wrapper(ssl, &count, 4);
     count = ntoh32(count);
-    fwrite(&count, 1, sizeof(count), stdout);
-    prj_list.clear();
+    prj_list->clear();
     for(i = 0; i < count; i++)
     {
         prj_name = read_string(ssl);
-        fwrite(prj_name, 1, strlen(prj_name) + 1, stdout);
-        prj_list.push_back(prj_name);
+        prj_list->push_back(prj_name);
         free(prj_name);
     }
 }
 
-void restore_get_time_line(SSL *ssl, const char *prj_name)
+void get_project_timeline(SSL *ssl, const char *prj_name, list<history_t> *timeline)
 {
     char buffer[2];
     char command = 0x09;
     uint32_t backup_id;
-    uint32_t backup_time;
+    uint32_t finish_time;
     uint32_t list_size;
     uint32_t i = 0;
 
@@ -183,16 +182,18 @@ void restore_get_time_line(SSL *ssl, const char *prj_name)
     ssl_write_wrapper(ssl, prj_name, strlen(prj_name) + 1);
     ssl_read_wrapper(ssl, buffer, 2); 
     ssl_read_wrapper(ssl, &list_size, 4);
+
+    timeline->clear();
     list_size = ntoh32(list_size);
-    fwrite(&list_size, 1, sizeof(list_size), stdout);
     for(i = 0; i < list_size; i++)
     {
+        history_t tmp;
+
         ssl_read_wrapper(ssl, &backup_id, 4);
-        ssl_read_wrapper(ssl, &backup_time, 4);
-        backup_id = ntoh32(backup_id);
-        backup_time = ntoh32(backup_time);
-        fwrite(&backup_id, 1, sizeof(backup_id), stdout);
-        fwrite(&backup_time, 1, sizeof(backup_time), stdout);
+        ssl_read_wrapper(ssl, &finish_time, 4);
+        tmp.backup_id = ntoh32(backup_id);
+        tmp.finish_time = ntoh32(finish_time);
+        timeline->push_back(tmp);
     }
 }
 
@@ -226,7 +227,6 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
     ssl_read_wrapper(ssl, buffer, 2);
     ssl_read_wrapper(ssl, &list_size, 4);
     list_size = ntoh32(list_size);
-    fwrite(&list_size, 1, sizeof(list_size), stdout);
     for(i = 0; i < list_size; i++)
     {
         string path;
@@ -260,7 +260,6 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
             }
             fclose(file);
         }
-        fwrite(&i, 1, sizeof(i), stdout);
         free(file_path);
     }
 }
@@ -293,7 +292,7 @@ int main(int argc, char **argv)
                 fprintf(stderr, "-i <instruction>\tInstruction name\n");
                 fprintf(stderr, "-f <path>\tConfiguration file path\n");
                 fprintf(stderr, "-p <name>\tProject name\n");
-                fprintf(stderr, "-r <order>\tRevision of the project\n");
+                fprintf(stderr, "-r <revision>\tRevision of the project\n");
                 fprintf(stderr, "-o <dir>\tOutput directory\n");
                 exit(0);
 
@@ -384,28 +383,47 @@ int main(int argc, char **argv)
 
     check_certificate( ssl, 1 );
 
-    //恢复流程：
-    //1.获取可恢复的项目列表
-    //2.获取每个可恢复项目的备份历史
-    //3.恢复指定项目的指定历史
-
     if(instruction)
     {
-        //instruction = getinfo
-        if(!strcmp(instruction, "getinfo"))
+        if(!strcmp(instruction, "list"))
         {
-            vector<string> prj_list;
-            size_t i;
-            size_t size;
-
-            restore_get_prj(ssl, prj_list);
-            size = prj_list.size();
-            for(i = 0; i < size; i++)
+            if(prj_name)
             {
-                restore_get_time_line(ssl, prj_list.at(i).c_str());
+                //list project timeline
+                list<history_t> timeline;
+                list<history_t>::iterator iter;
+
+                get_project_timeline(ssl, prj_name, &timeline);
+                printf("\ntotal %d history:\n", (int)timeline.size());
+                for(iter = timeline.begin(); iter != timeline.end(); ++iter)
+                {
+                    time_t t;
+                    struct tm *tmp;
+                    char buf[200];
+
+                    t = (time_t)iter->finish_time;
+                    tmp = localtime(&t);
+                    if(tmp == NULL)
+                        die("localtime error");
+                    if(strftime(buf, sizeof(buf), "%Y-%m-%d %T (%Z)", tmp) == 0)
+                        die("strftime error");
+                    printf("#%04d: %s\n", (int)iter->backup_id, buf);
+                }
+            }
+            else
+            {
+                //list project
+                list<string> prj_list;
+                list<string>::iterator iter;
+
+                get_project_list(ssl, &prj_list);
+                printf("\ntotal %d project(s):\n", (int)prj_list.size());
+                for(iter = prj_list.begin(); iter != prj_list.end(); ++iter)
+                {
+                    printf("%s\n", iter->c_str());
+                }
             }
         }
-        //instruction = restore
         else if(!strcmp(instruction, "restore"))
         {
             uint32_t tmp_id;

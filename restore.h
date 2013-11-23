@@ -2,16 +2,16 @@
 #define RESTORE_H
 
 #include <openssl/ssl.h>
-#include <vector>
+#include <list>
 #include <string>
 #include "helper.h"
 
 using namespace std;
 
-typedef struct IDTIME
+typedef struct
 {
     uint32_t backup_id;
-    uint32_t finished_time;
-}IDTIME;
+    uint32_t finish_time;
+}history_t;
 
 #endif
