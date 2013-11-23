@@ -340,6 +340,9 @@ int main(int argc, char **argv)
                 break;
 
             case 'T':  tlsv1 = 1;       break;
+
+            default:
+                exit(1);
         }
     }
 
