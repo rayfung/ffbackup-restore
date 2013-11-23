@@ -136,7 +136,7 @@ static void check_certificate( SSL *ssl, int required )
  */
 void die(const char *msg)
 {
-    fprintf(stderr, "[FATAL ERROR] %s\n", msg);
+    fprintf(stderr, "[FATAL ERROR] %s\n\n", msg);
     exit(1);
 }
 
@@ -222,6 +222,8 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
             die(("failed to create directory " + base_dir).c_str());
     }
 
+    printf("data will be stored into %s\n", base_dir.c_str());
+
     buffer[0] = version;
     buffer[1] = command;
     ssl_write_wrapper(ssl, buffer, 2);
@@ -229,14 +231,22 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
     backup_id = hton32(backup_id);
     ssl_write_wrapper(ssl, &backup_id, 4);
 
+    printf("waiting for response...");
+    fflush(stdout);
+
     ssl_read_wrapper(ssl, buffer, 2);
     ssl_read_wrapper(ssl, &list_size, 4);
+    printf(" done\n");
+
     list_size = ntoh32(list_size);
     for(i = 0; i < list_size; i++)
     {
         string path;
 
         file_path = read_string(ssl);
+        printf("creating %s", file_path);
+        fflush(stdout);
+
         path = base_dir + "/" + file_path;
         ssl_read_wrapper(ssl, &file_type, 1);
         if(file_type == 'd')
@@ -266,6 +276,7 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
             fclose(file);
         }
         free(file_path);
+        printf("\n");
     }
 }
 
@@ -388,6 +399,7 @@ int main(int argc, char **argv)
 
     check_certificate( ssl, 1 );
 
+    system("/usr/bin/clear");
     if(instruction)
     {
         if(!strcmp(instruction, "list"))
@@ -399,7 +411,7 @@ int main(int argc, char **argv)
                 list<history_t>::iterator iter;
 
                 get_project_timeline(ssl, prj_name, &timeline);
-                printf("\ntotal %d history:\n", (int)timeline.size());
+                printf("total %d history:\n", (int)timeline.size());
                 for(iter = timeline.begin(); iter != timeline.end(); ++iter)
                 {
                     time_t t;
@@ -422,7 +434,7 @@ int main(int argc, char **argv)
                 list<string>::iterator iter;
 
                 get_project_list(ssl, &prj_list);
-                printf("\ntotal %d project(s):\n", (int)prj_list.size());
+                printf("total %d project(s):\n", (int)prj_list.size());
                 for(iter = prj_list.begin(); iter != prj_list.end(); ++iter)
                 {
                     printf("%s\n", iter->c_str());
