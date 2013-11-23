@@ -136,7 +136,7 @@ static void check_certificate( SSL *ssl, int required )
  */
 void die(const char *msg)
 {
-    fprintf(stderr, "%s\n", msg);
+    fprintf(stderr, "[FATAL ERROR] %s\n", msg);
     exit(1);
 }
 
@@ -215,7 +215,12 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
     base_dir += string("/") + prj_name + string("#") + size2string(backup_id);
 
     if(mkdir(base_dir.c_str(), 0775) == -1)
-        die((base_dir + " already exists").c_str());
+    {
+        if(errno == EEXIST)
+            die((base_dir + " already exists").c_str());
+        else
+            die(("failed to create directory " + base_dir).c_str());
+    }
 
     buffer[0] = version;
     buffer[1] = command;
