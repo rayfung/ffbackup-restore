@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <sstream>
+#include <algorithm>
 #include "helper.h"
 #include "ffbuffer.h"
 
@@ -148,4 +149,106 @@ std::string size2string(size_t size)
 
     s << size;
     return s.str();
+}
+
+/**
+ * 将一个路径以 '/' 为分隔符分割成若干个部分，如果路径以 '/' 开头，那么它会被当成是第一部分
+ * 分割后的任何部分都不会再包含 '/'，除非参数是一个绝对路径，此时，第一部分是单个字符 '/'
+ *
+ * 例子：
+ *   "/var/log" -> {"/", "var", "log"}
+ *   "history/0/" -> {"history", "0"}
+ *   "./cache///patch" -> {".", "cache", "patch"}
+ */
+std::list<std::string> split_path(const std::string &path)
+{
+    size_t path_len;
+    const char *path_c;
+    std::list<std::string> component_list;
+    size_t i;
+    size_t pos;
+    size_t len;
+    int state;
+
+    path_len = path.size();
+    path_c = path.c_str();
+
+    if(path_c[0] == '/')
+        component_list.push_back(std::string("/"));
+    state = 0;
+    for(i = 0; i <= path_len;)
+    {
+        char ch = path_c[i];
+        switch(state)
+        {
+        case 0:
+            if(ch == '/' || ch == '\0')
+            {
+                ++i;
+                break;
+            }
+        case 1:
+            pos = i;
+            len = 0;
+            state = 2;
+        case 2:
+            if(ch == '/' || ch == '\0')
+            {
+                component_list.push_back(std::string(path_c + pos, len));
+                state = 0;
+            }
+            else
+            {
+                ++len;
+                ++i;
+            }
+            break;
+        }
+    }
+    return component_list;
+}
+
+/**
+ * 检查路径是否"安全"
+ *
+ * 一个"安全"的路径必须满足以下所有条件：
+ * 1.路径不为空
+ * 2.路径不包含空字符
+ * 3.不是绝对路径
+ * 4.路径中所有组成部分都不能为 ".." 或者 "."
+ *
+ */
+bool is_path_safe(const std::string &path)
+{
+    std::list<std::string> component_list;
+
+    if(path.empty())
+        return false;
+    if(path.find('\0') != std::string::npos)
+        return false;
+
+    component_list = split_path(path);
+    if(component_list.size() > 0 && component_list.front() == std::string("/"))
+        return false;
+    if(std::find(component_list.begin(), component_list.end(), std::string(".."))
+            != component_list.end())
+        return false;
+    if(std::find(component_list.begin(), component_list.end(), std::string("."))
+            != component_list.end())
+        return false;
+    return true;
+}
+
+/* 检查项目名是否合法 */
+bool is_project_name_safe(const char *prj)
+{
+    if(prj[0] == '\0')
+        return false; //项目名称不能为空
+    while(prj[0])
+    {
+        if(prj[0] == '/' || prj[0] == '.')
+            return false;
+        ++prj;
+    }
+    return true;
 }

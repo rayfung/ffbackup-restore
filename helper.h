@@ -6,6 +6,7 @@
 #include <openssl/err.h>
 #include <stdint.h>
 #include <string>
+#include <list>
 
 void dump_data(void *data, size_t size);
 
@@ -25,5 +26,7 @@ char *read_string(SSL *ssl);
 void ssl_read_wrapper(SSL *ssl, void *buffer, int num);
 void ssl_write_wrapper(SSL *ssl, const void *buffer, int num);
 std::string size2string(size_t size);
+bool is_path_safe(const std::string &path);
+bool is_project_name_safe(const char *prj);
 
 #endif
