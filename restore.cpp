@@ -391,6 +391,8 @@ int main(int argc, char **argv)
     }
 
     sock = ip_connect( SOCK_STREAM, IPPROTO_TCP, host, port );
+    if(sock == -1)
+        exit(1);
 
     /* Associate SSL connection with server socket */
     ssl = SSL_new( ctx );
