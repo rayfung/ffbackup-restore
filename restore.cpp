@@ -244,6 +244,8 @@ void restore(SSL *ssl, const char *prj_name, uint32_t backup_id, const char *out
         string path;
 
         file_path = read_string(ssl);
+        if(!is_path_safe(std::string(file_path)))
+            die("illegal path");
         printf("[%d/%d] ", (int)(i + 1), (int)list_size);
         printf("creating %s", file_path);
         fflush(stdout);
