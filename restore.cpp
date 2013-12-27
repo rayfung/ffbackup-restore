@@ -162,6 +162,8 @@ void get_project_list(SSL *ssl, list<string> *prj_list)
     for(i = 0; i < count; i++)
     {
         prj_name = read_string(ssl);
+        if(!is_project_name_safe(prj_name))
+            die("remote host sent illegal project name");
         prj_list->push_back(prj_name);
         free(prj_name);
     }
