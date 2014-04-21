@@ -5,6 +5,7 @@
 #include <netdb.h>
 #include <signal.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <openssl/sha.h>
 #include <openssl/bio.h>
